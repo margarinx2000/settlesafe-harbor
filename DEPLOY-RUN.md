@@ -78,4 +78,56 @@ faucet-funded balance, so the run amount was scaled to 50,000,000 umec.)
 
 - Demo UI hookup to contract me1qwy2pa40vhvt8hetkzky3shhd7pnau4rgerk3j75fpvt8gejallqw8d7u4 (code 45)
 - 3–5 min English demo video
-- Optional: a second invoice exercising the dispute/refund path for richer run records
+- Optional: a second invoice exercising the dispute/refund path for richer run records — **DONE 26 Nov 2026, see next section**
+
+## Invoice #1 — dispute path (refund outcome)
+
+Run executed 26 Nov 2026, ~06:20–06:35 WIB (25 Nov 23:20–23:35 UTC), authorized
+by Mantri 06:18 WIB ("Poin 1 dan 2 gak bisa kamu kerjakan?" — do points 1 and 2
+yourself). Same contract, same demo keys as invoice #0; Mantri's and Wahyuni's
+ME ID wallets were NOT touched. Chain mechain_400-1 via the local relay;
+block height 5,517,549 at start, 5,517,579 at the final resolve.
+
+Invoice: seller → buyer, arbiter as above, amount **25,000,000 umec**,
+description "Dispute-path demo — packaging design", pay_window 86400,
+deliver_window 172800, review_window 259200. (Per the contract schema the
+seller is the create sender — `seller: info.sender` — so the seller created
+invoice #1, exactly as for invoice #0.)
+
+### Pre-funding (deployer top-ups, before the lifecycle)
+
+Starting balances: buyer 19,924,252 · seller 69,925,545 · arbiter 0 ·
+deployer 108,798,376 umec (unchanged since the invoice #0 run).
+
+| Send | Tx hash | Height | Verified state after |
+|---|---|---|---|
+| deployer → buyer 20,000,000 umec | `4B33A51CFACF520D86C18BA71F8508113DE17C9B54B9F58FD7FCDDCC2EC1F4CC` | 5,517,557 | buyer = 39,924,252 |
+| deployer → arbiter 5,000,000 umec | `61019B9E0B823FD051D112338D99CA026C48C0B194DF21D56C62C3848B74DDA4` | 5,517,561 | arbiter = 5,000,000 (arbiter had 0 and needs gas for the resolve tx) |
+
+### Lifecycle run — invoice #1 (dispute → refund)
+
+| Step | From | Tx hash | Height | Gas used | Verified state after |
+|---|---|---|---|---|---|
+| create_invoice | seller | `8D8D664018930D036066C2F73906D103D66887855C074E6B091801ECE82CFCF1` | 5,517,567 | 230,690 | status **Created**, invoice_count = 2 |
+| fund_invoice (+25,000,000 umec) | buyer | `B3C894CF342A329E4C026846870B2155E517AC80B859F58A60F1B18D0458A561` | 5,517,571 | 225,366 | status **Funded**, total_escrowed = 25,000,000 |
+| mark_delivered | seller | `B9BC453936E08228A64462C134FF6682CFF625B2B8AF5CD58532BDA45637CDDA` | 5,517,574 | 204,487 | status **Delivered**, review_deadline set |
+| raise_dispute | buyer | `EC37B1A69F470379C43B82BA6B7B60C9945E7E1B28DB71A1180D4B934F290CB8` | 5,517,576 | 204,540 | status **Disputed** |
+| resolve_dispute (release_to_seller = false) | arbiter | `F0D17DF67387730FA4858ECF355AC755D28A9FAD48CD3F0D17DC9DE8312D53D5` | 5,517,579 | 231,398 | status **Refunded**, total_escrowed = 0 |
+
+Status transitions: Created → Funded → Delivered → Disputed → **Refunded**
+(the dispute branch invoice #0 never touched; the full 25,000,000 umec went
+back to the buyer, nothing to the seller).
+
+### Final verification (queries after resolve)
+
+- `get_invoice {"id":1}` → status **Refunded**, amount "25000000",
+  seller/buyer/arbiter as above, description as above.
+- `total_escrowed {}` → 0 umec; contract bank balance = 0 umec.
+- Buyer balance: **39,868,189 umec** = 39,924,252 (after top-up) − 25,000,000
+  escrow − 56,063 fund+dispute fees + 25,000,000 refund → **refund proven
+  on-chain to the exact umec**.
+- Seller balance: 69,868,963 umec = 69,925,545 − 56,582 create+deliver fees
+  (no payout — correct for the refund outcome).
+- Arbiter balance: 4,970,319 umec = 5,000,000 − 29,681 resolve fee.
+- Deployer balance after all steps: 83,814,021 umec (not a lifecycle party;
+  spent 25,000,000 on the two top-ups plus their send fees).
