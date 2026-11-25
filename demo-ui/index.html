@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SettleSafe — Escrowed Invoice Payments on ME Network</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111a2e; --panel2:#0e1626; --line:#22304d;
+    --text:#e8eef8; --muted:#93a4c0; --accent:#3ecf8e; --accent2:#4da3ff;
+    --warn:#ffb454; --danger:#ff6b6b; --pill:#1b2a45;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:linear-gradient(180deg,#0b1220 0%,#0a0f1a 100%);color:var(--text);}
+  a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 18px 64px}
+  header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+    padding:18px 22px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .brand{display:flex;gap:14px;align-items:center}
+  .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#3ecf8e,#4da3ff);
+    display:flex;align-items:center;justify-content:center;font-size:24px;color:#06281a;font-weight:700}
+  h1{margin:0;font-size:24px;letter-spacing:.2px}
+  .tagline{color:var(--muted);font-size:13.5px;margin-top:2px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{font-size:12px;padding:6px 10px;border-radius:999px;background:var(--pill);
+    border:1px solid var(--line);color:var(--muted)}
+  .badge b{color:var(--text)}
+  .badge.live{color:#06281a;background:var(--accent);border-color:var(--accent);font-weight:700}
+  .badge.recorded{color:#2a1a00;background:var(--warn);border-color:var(--warn);font-weight:700}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 22px;margin-top:18px}
+  h2{margin:0 0 6px;font-size:18px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+  .mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12.5px;word-break:break-all}
+  .addr{display:flex;gap:8px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;margin-top:8px}
+  .addr span{flex:1}
+  button.copy,button.act{cursor:pointer;border:1px solid var(--line);background:var(--pill);color:var(--text);
+    border-radius:8px;padding:5px 10px;font-size:12px;white-space:nowrap}
+  button.copy:hover,button.act:hover{border-color:var(--accent2)}
+  button.act.primary{background:var(--accent);color:#06281a;border-color:var(--accent);font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .kv{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .kv .k{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
+  .kv .v{font-size:16px;margin-top:4px;font-weight:600}
+  .kv .v.small{font-size:12.5px;font-weight:400}
+  .status{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:700;font-size:13px}
+  .status.Released{background:#0f3d27;color:#5eeaa0;border:1px solid #1e6b45}
+  .status.Created{background:#22304d;color:#bcd}
+  .status.Funded{background:#123a5c;color:#7cc2ff;border:1px solid #1e5b8f}
+  .status.Delivered{background:#3d2f10;color:#ffd27c;border:1px solid #6b531e}
+  .status.Disputed{background:#4a1420;color:#ff9db0;border:1px solid #7d2438}
+  .status.Refunded,.status.Cancelled{background:#333;color:#ccc;border:1px solid #555}
+  /* stepper */
+  .stepper{display:flex;flex-wrap:wrap;gap:0;align-items:stretch;margin-top:8px}
+  .step{flex:1 1 150px;min-width:150px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:12px;padding:14px;position:relative}
+  .step + .step{margin-left:26px}
+  .step + .step::before{content:"→";position:absolute;left:-22px;top:50%;transform:translateY(-50%);
+    color:var(--accent);font-size:18px;font-weight:700}
+  .step .n{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .step .t{font-weight:700;margin:4px 0 6px}
+  .step.done{border-color:#1e6b45}
+  .step .check{color:var(--accent);font-weight:700}
+  .step .hash{margin-top:8px}
+  .branch{margin-top:16px;border:1px dashed #7d2438;border-radius:12px;padding:14px;background:#170d16}
+  .branch .t{font-weight:700;color:#ff9db0}
+  .branch p{color:var(--muted);font-size:13px;margin:6px 0 0}
+  /* try-flow */
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .tabs button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+    padding:8px 12px;border-radius:999px;font-size:13px}
+  .tabs button.on{background:var(--accent2);border-color:var(--accent2);color:#04182e;font-weight:700}
+  form .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+  input,select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--text);font-size:13.5px}
+  pre{background:#05080f;border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;
+    font-size:12.5px;line-height:1.55;color:#cfe3ff}
+  .out-head{display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px}
+  .out-head h3{margin:0;font-size:14px}
+  .note{font-size:12.5px;color:var(--muted)}
+  .warnbox{border:1px solid #6b531e;background:#241a08;color:#ffd27c;border-radius:10px;
+    padding:10px 14px;font-size:13px;margin-top:12px}
+  footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:26px;line-height:1.7}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">✓</div>
+      <div>
+        <h1>SettleSafe</h1>
+        <div class="tagline">Escrowed invoice payments for small sellers — the buyer's MEC is locked in a
+          CosmWasm contract and released to the seller only after delivery is confirmed.</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">Network <b>ME Beta Testnet</b></span>
+      <span class="badge">Chain <b>mechain_400-1</b></span>
+      <span class="badge" id="feedBadge">Feed: <b>connecting…</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Contract</h2>
+    <p class="sub">CosmWasm escrow contract (code ID 45), instantiated with escrow denom <b>umec</b>.
+      All data below is read live from the ME Hub REST endpoint — no wallet, no signing, read-only.</p>
+    <div class="addr"><span class="mono" id="contractAddr"></span>
+      <button class="copy" data-copy="contractAddr">Copy</button></div>
+    <div class="grid" style="margin-top:12px">
+      <div class="kv"><div class="k">Escrow denom</div><div class="v" id="cfgDenom">…</div></div>
+      <div class="kv"><div class="k">Invoices on-chain</div><div class="v" id="cfgCount">…</div></div>
+      <div class="kv"><div class="k">Total escrowed now</div><div class="v" id="cfgEscrowed">…</div></div>
+      <div class="kv"><div class="k">Explorer</div><div class="v small">
+        <a href="https://www.explorer-testnet.me" target="_blank" rel="noopener">explorer-testnet.me ↗</a></div></div>
+    </div>
+    <div id="fallbackNote" class="warnbox hidden">Live query unreachable from this browser — showing the
+      <b>recorded snapshot</b> from the deployment run record (25 Nov 2026, DEPLOY-RUN.md). Values are the
+      verified on-chain state at the end of that run.</div>
+  </section>
+
+  <section>
+    <h2>Invoice #0 — “Logo design package”</h2>
+    <p class="sub">The first invoice ever created on this contract, driven through the full happy path on
+      25 Nov 2026. Final on-chain status: <b>Released</b> — the seller was paid out of escrow.</p>
+    <div class="grid">
+      <div class="kv"><div class="k">Status</div><div class="v"><span class="status" id="invStatus">…</span></div></div>
+      <div class="kv"><div class="k">Amount</div><div class="v" id="invAmount">…</div></div>
+      <div class="kv"><div class="k">Description</div><div class="v small" id="invDesc">…</div></div>
+      <div class="kv"><div class="k">Review window</div><div class="v small" id="invReviewWin">…</div></div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="addr"><span class="mono"><b style="color:var(--accent)">Seller</b> · demo key <span class="mono">settlesafe-seller</span><br><span id="invSeller"></span></span>
+        <button class="copy" data-copy="invSeller">Copy</button></div>
+      <div class="addr"><span class="mono"><b style="color:var(--accent2)">Buyer</b> · demo key <span class="mono">settlesafe-buyer</span><br><span id="invBuyer"></span></span>
+        <button class="copy" data-copy="invBuyer">Copy</button></div>
+      <div class="addr"><span class="mono"><b style="color:var(--warn)">Arbiter</b> · demo key <span class="mono">settlesafe-arbiter</span><br><span id="invArbiter"></span></span>
+        <button class="copy" data-copy="invArbiter">Copy</button></div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div class="kv"><div class="k">Pay deadline</div><div class="v small" id="invPayDl">…</div></div>
+      <div class="kv"><div class="k">Deliver deadline</div><div class="v small" id="invDelDl">…</div></div>
+      <div class="kv"><div class="k">Review deadline</div><div class="v small" id="invRevDl">…</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lifecycle — invoice #0, on-chain proof</h2>
+    <p class="sub">Every step below is a real transaction on ME Beta Testnet. Each hash links straight to its
+      transaction page on <a href="https://www.explorer-testnet.me" target="_blank" rel="noopener">the testnet explorer</a> and can also be copied.</p>
+    <div class="stepper" id="stepper"></div>
+    <div class="branch">
+      <div class="t">⚖ Dispute branch (supported by the contract, not exercised in run #0)</div>
+      <p>From <b>Funded</b> or <b>Delivered</b>, either party can <span class="mono">raise_dispute</span> —
+        funds stay locked — and the named <b>arbiter</b> settles with
+        <span class="mono">resolve_dispute { release_to_seller: true | false }</span> →
+        <b>Released</b> (seller paid) or <b>Refunded</b> (buyer paid back). Safety rails: the seller can
+        <span class="mono">claim_after_review</span> once the review window expires, anyone can trigger
+        <span class="mono">refund_after_deadline</span> if the seller never delivers, and a
+        <span class="mono">cancel_invoice</span> is possible while still <b>Created</b>.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Try the flow — build any execute message</h2>
+    <p class="sub">Pick a step, adjust the inputs, and SettleSafe renders the exact CosmWasm execute JSON plus
+      the equivalent <span class="mono">med</span> CLI command used in the real deployment run.
+      <b>Nothing is signed or sent from this page</b> — run the command yourself with the demo keys to reproduce the flow.</p>
+    <div class="tabs" id="tabs"></div>
+    <form id="flowForm" onsubmit="return false"><div class="row" id="fields"></div></form>
+    <div class="out-head"><h3>Execute message (JSON)</h3><button class="copy" data-copy="jsonOut">Copy JSON</button></div>
+    <pre id="jsonOut"></pre>
+    <div class="out-head"><h3>Equivalent med command</h3><button class="copy" data-copy="cmdOut">Copy command</button></div>
+    <pre id="cmdOut"></pre>
+    <p class="note">Commands target the local RPC relay (<span class="mono">tcp://127.0.0.1:26657</span>) exactly as in the
+      deployment run; point <span class="mono">--node</span> at any reachable ME Hub RPC endpoint instead if you run your own.
+      Funding attaches the invoice amount in umec via <span class="mono">--amount</span> — the contract rejects under- or over-payment.</p>
+  </section>
+
+  <footer>
+    SettleSafe · Team SettleSafe (captain Margarin + Wahyuni) · MetaEarth HARBOR hackathon<br>
+    Contract deployed 25 Nov 2026 · Store tx and instantiate tx are listed in the project run record (DEPLOY-RUN.md).
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ---------- constants (from DEPLOY-RUN.md) ---------- */
+const CONTRACT = "me1qwy2pa40vhvt8hetkzky3shhd7pnau4rgerk3j75fpvt8gejallqw8d7u4";
+const CODE_ID = 45;
+const REST = "https://beta-hub-1317.explorer-testnet.me";
+const SELLER = "me1hu3s8gzqa0cmn09sha3svq9t8r5s598npar50z";
+const BUYER  = "me13ceqzt2ly743q5p7jyrwl09cq2wnkwnkllzf2w";
+const ARBITER= "me1w0jt2c45kkgp2u5eys0szt979lkcahkeayvw6y";
+const TX = {
+  create:  "CF05909AD9279BC906327FA35412510CA22F1538B67B7009F5626365CAFB7BF5",
+  fund:    "67DADDDC4872650410157227F459EDB3167C50A6EBB4053F5E92BA318913F128",
+  deliver: "429EE322AD669CE1FFFFBB93C1D25F4528F4050281B44714F7D004F27C75CDA3",
+  release: "0C48374A389314CD74713FDCF5CBF50D6292D48BCEEBC6E2ABB452769DD66C4E"
+};
+/* Recorded snapshot — verified end-state of the 25 Nov 2026 deploy run. */
+const SNAPSHOT = {
+  invoice: { seller: SELLER, buyer: BUYER, arbiter: ARBITER, amount: "50000000",
+    pay_deadline: 1795711863, deliver_deadline: 1795884663, review_deadline: 1795884702,
+    review_window: 259200, status: "Released", description: "Logo design package" },
+  count: 1,
+  escrowed: { amount: "0", denom: "umec" }
+};
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+function fmtMEC(umecStr){
+  const n = BigInt(umecStr); const whole = n / 100000000n; let frac = (n % 100000000n).toString().padStart(8,"0");
+  frac = frac.replace(/0+$/,"");
+  return (frac ? whole.toString()+"."+frac : whole.toString()) + " MEC";
+}
+function fmtAmt(umecStr){ return Number(umecStr).toLocaleString("en-US") + " umec (" + fmtMEC(umecStr) + ")"; }
+function fmtTs(sec){
+  if(!sec) return "—";
+  const d = new Date(sec*1000);
+  return d.toISOString().replace("T"," ").replace(".000Z"," UTC") + " · epoch " + sec;
+}
+function fmtDur(sec){
+  if(sec % 86400 === 0) return (sec/86400) + " days (" + sec.toLocaleString("en-US") + " s)";
+  if(sec % 3600 === 0) return (sec/3600) + " hours (" + sec.toLocaleString("en-US") + " s)";
+  return sec.toLocaleString("en-US") + " s";
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button.copy"); if(!b) return;
+  const el = $(b.dataset.copy); if(!el) return;
+  navigator.clipboard.writeText(el.textContent.trim()).then(()=>{ b.textContent="Copied ✓"; setTimeout(()=>b.textContent="Copy",1200); });
+});
+
+/* ---------- render invoice ---------- */
+function render(inv, count, escrowed, live){
+  $("invStatus").textContent = inv.status; $("invStatus").className = "status " + inv.status;
+  $("invAmount").textContent = fmtAmt(inv.amount);
+  $("invDesc").textContent = inv.description;
+  $("invReviewWin").textContent = fmtDur(inv.review_window);
+  $("invSeller").textContent = inv.seller; $("invBuyer").textContent = inv.buyer; $("invArbiter").textContent = inv.arbiter;
+  $("invPayDl").textContent = fmtTs(inv.pay_deadline);
+  $("invDelDl").textContent = fmtTs(inv.deliver_deadline);
+  $("invRevDl").textContent = fmtTs(inv.review_deadline);
+  $("cfgDenom").textContent = escrowed.denom;
+  $("cfgCount").textContent = count;
+  $("cfgEscrowed").textContent = fmtAmt(escrowed.amount);
+  const badge = $("feedBadge");
+  if(live){ badge.className = "badge live"; badge.textContent = "● LIVE on-chain data"; }
+  else { badge.className = "badge recorded"; badge.textContent = "● RECORDED snapshot"; $("fallbackNote").classList.remove("hidden"); }
+}
+
+/* ---------- live query path ---------- */
+async function smartQuery(obj){
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  const r = await fetch(REST + "/cosmwasm/wasm/v1/contract/" + CONTRACT + "/smart/" + b64);
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  return j.data;
+}
+(async function load(){
+  $("contractAddr").textContent = CONTRACT + "  ·  code ID " + CODE_ID;
+  try {
+    const [inv, cnt, esc] = await Promise.all([
+      smartQuery({get_invoice:{id:0}}),
+      smartQuery({invoice_count:{}}),
+      smartQuery({total_escrowed:{}})
+    ]);
+    render(inv, cnt.count, esc, true);
+  } catch(e) {
+    render(SNAPSHOT.invoice, SNAPSHOT.count, SNAPSHOT.escrowed, false);
+  }
+})();
+
+/* ---------- lifecycle stepper ---------- */
+const STEPS = [
+  {n:"Step 1 · Seller", t:"Create invoice", key:"create",  note:"50,000,000 umec · “Logo design package”"},
+  {n:"Step 2 · Buyer",  t:"Fund invoice",   key:"fund",    note:"Buyer attaches exactly 50,000,000 umec — funds lock in the contract"},
+  {n:"Step 3 · Seller", t:"Mark delivered", key:"deliver", note:"Delivery declared; review window starts"},
+  {n:"Step 4 · Buyer",  t:"Release",        key:"release", note:"Buyer confirms → escrow pays the seller. Status: Released, total escrowed back to 0"}
+];
+const EXPLORER_TX = "https://www.explorer-testnet.me/en-US/transactions/";
+$("stepper").innerHTML = STEPS.map(s =>
+  '<div class="step done"><div class="n">'+s.n+'</div><div class="t">'+s.t+' <span class="check">✓ done</span></div>' +
+  '<div class="note">'+s.note+'</div><div class="hash mono">tx <a href="'+EXPLORER_TX+TX[s.key]+'" target="_blank" rel="noopener">' +
+  TX[s.key].slice(0,16)+'…'+TX[s.key].slice(-8)+' ↗</a></div>' +
+  '<div style="margin-top:6px"><button class="copy" data-hash="'+TX[s.key]+'">Copy full hash</button></div></div>'
+).join("");
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-hash]"); if(!b) return;
+  navigator.clipboard.writeText(b.dataset.hash).then(()=>{ b.textContent="Copied ✓"; setTimeout(()=>b.textContent="Copy full hash",1200); });
+});
+
+/* ---------- try-the-flow ---------- */
+const FLOWS = {
+  create_invoice: { label:"1 · Create invoice", from:"settlesafe-seller", fields:[
+    {k:"buyer", label:"Buyer address", v:BUYER}, {k:"arbiter", label:"Arbiter address", v:ARBITER},
+    {k:"amount", label:"Amount (umec)", v:"50000000", num:true},
+    {k:"description", label:"Description", v:"Logo design package"},
+    {k:"pay_window", label:"Pay window (s)", v:"86400", num:true},
+    {k:"deliver_window", label:"Deliver window (s)", v:"172800", num:true},
+    {k:"review_window", label:"Review window (s)", v:"259200", num:true} ],
+    build:f=>({create_invoice:{buyer:f.buyer, arbiter:f.arbiter, amount:String(f.amount),
+      description:f.description, pay_window:+f.pay_window, deliver_window:+f.deliver_window, review_window:+f.review_window}}) },
+  fund_invoice: { label:"2 · Fund invoice", from:"settlesafe-buyer", fields:[
+    {k:"id", label:"Invoice id", v:"0", num:true}, {k:"fund_amount", label:"Attach (umec) — must equal invoice amount", v:"50000000", num:true} ],
+    build:f=>({fund_invoice:{id:+f.id}}), funds:f=>String(f.fund_amount) },
+  mark_delivered: { label:"3 · Mark delivered", from:"settlesafe-seller", fields:[{k:"id", label:"Invoice id", v:"0", num:true}],
+    build:f=>({mark_delivered:{id:+f.id}}) },
+  release: { label:"4 · Release to seller", from:"settlesafe-buyer", fields:[{k:"id", label:"Invoice id", v:"0", num:true}],
+    build:f=>({release:{id:+f.id}}) },
+  raise_dispute: { label:"⚖ Raise dispute", from:"settlesafe-buyer", fields:[{k:"id", label:"Invoice id", v:"0", num:true}],
+    build:f=>({raise_dispute:{id:+f.id}}) },
+  resolve_dispute: { label:"⚖ Resolve dispute (arbiter)", from:"settlesafe-arbiter", fields:[
+    {k:"id", label:"Invoice id", v:"0", num:true},
+    {k:"release_to_seller", label:"Outcome", v:"true", options:[["true","Release to seller"],["false","Refund to buyer"]]} ],
+    build:f=>({resolve_dispute:{id:+f.id, release_to_seller: f.release_to_seller === "true"}}) },
+  cancel_invoice: { label:"Cancel (while Created)", from:"settlesafe-seller", fields:[{k:"id", label:"Invoice id", v:"0", num:true}],
+    build:f=>({cancel_invoice:{id:+f.id}}) },
+  claim_after_review: { label:"Claim after review window", from:"settlesafe-seller", fields:[{k:"id", label:"Invoice id", v:"0", num:true}],
+    build:f=>({claim_after_review:{id:+f.id}}) },
+  refund_after_deadline: { label:"Refund after deliver deadline", from:"settlesafe-buyer", fields:[{k:"id", label:"Invoice id", v:"0", num:true}],
+    build:f=>({refund_after_deadline:{id:+f.id}}) }
+};
+let current = "create_invoice";
+function renderTabs(){
+  $("tabs").innerHTML = Object.keys(FLOWS).map(k =>
+    '<button data-flow="'+k+'" class="'+(k===current?"on":"")+'">'+FLOWS[k].label+'</button>').join("");
+}
+function renderFlow(){
+  const flow = FLOWS[current];
+  $("fields").innerHTML = flow.fields.map(f => {
+    if(f.options) return '<div><label>'+f.label+'</label><select id="in_'+f.k+'">' +
+      f.options.map(o=>'<option value="'+o[0]+'"'+(o[0]===f.v?" selected":"")+'>'+o[1]+'</option>').join("") + '</select></div>';
+    return '<div><label>'+f.label+'</label><input id="in_'+f.k+'" value="'+f.v+'"></div>';
+  }).join("");
+  $("fields").querySelectorAll("input,select").forEach(el => el.addEventListener("input", updateOut));
+  updateOut();
+}
+function updateOut(){
+  const flow = FLOWS[current]; const vals = {};
+  flow.fields.forEach(f => { const el = $("in_"+f.k); vals[f.k] = el ? el.value : f.v; });
+  const msg = flow.build(vals);
+  $("jsonOut").textContent = JSON.stringify(msg, null, 2);
+  let cmd = "med tx wasm execute " + CONTRACT + " '" + JSON.stringify(msg) + "'";
+  if(flow.funds) cmd += " --amount " + flow.funds(vals) + "umec";
+  cmd += " --from " + flow.from + " --keyring-backend test --chain-id mechain_400-1" +
+         " --node tcp://127.0.0.1:26657 --gas auto --gas-adjustment 1.3 --gas-prices 0.1umec -y";
+  $("cmdOut").textContent = cmd;
+}
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-flow]"); if(!b) return;
+  current = b.dataset.flow; renderTabs(); renderFlow();
+});
+renderTabs(); renderFlow();
+</script>
+</body>
+</html>
